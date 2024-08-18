@@ -56,6 +56,9 @@ or:
    Task form, *Timesheets* tab, check *Non-billable* for specific
    timesheet entries
 
+To have access to this *Non-billable* field, the user must be added to the 
+*Exclude timesheets from sale order* security group.
+
 Bug Tracker
 ===========
 
