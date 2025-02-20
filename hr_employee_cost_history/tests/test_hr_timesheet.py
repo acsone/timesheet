@@ -239,7 +239,30 @@ class HrEmployeeCostHistory(TransactionCase):
 
     def test_update_employee_cost_if_invoice(self):
         self.sale_order._create_invoices()
+        timesheet_cost_init = self.env["hr.employee.timesheet.cost.history"].search(
+            [
+                ("employee_id", "=", self.employee.id),
+            ]
+        )
+        self.assertFalse(timesheet_cost_init)
+        # update hourly cost in the future regarding timesheet invoice date
         self.new_timesheet_cost_wizard(self.employee, 15.0, date.today())
+        timesheet_cost_future = self.env["hr.employee.timesheet.cost.history"].search(
+            [
+                ("employee_id", "=", self.employee.id),
+            ]
+        )
+        self.assertEqual(timesheet_cost_future.hourly_cost, 15)
+        # update hourly cost in the past regarding timesheet invoice date
         self.new_timesheet_cost_wizard(
             self.employee, 20.0, date.today() - relativedelta(days=10)
         )
+        timesheet_cost_past = (
+            self.env["hr.employee.timesheet.cost.history"].search(
+                [
+                    ("employee_id", "=", self.employee.id),
+                ]
+            )
+            - timesheet_cost_future
+        )
+        self.assertEqual(timesheet_cost_past.hourly_cost, 20)
