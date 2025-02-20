@@ -63,6 +63,7 @@ class HrEmployeeTimesheetCost(models.TransientModel):
             [
                 ("employee_id", "=", self.employee_id.id),
                 ("date", ">=", self.starting_date),
+                ("timesheet_invoice_id", "=", False),
             ]
         )
         timesheet_ids._timesheet_postprocess({"employee_id": self.employee_id.id})

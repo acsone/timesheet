@@ -14,7 +14,7 @@
     "installable": True,
     "auto_install": False,
     "depends": [
-        "hr_timesheet",
+        "sale_timesheet",
     ],
     "data": [
         "security/ir.model.access.csv",

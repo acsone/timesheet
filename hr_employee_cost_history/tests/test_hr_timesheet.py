@@ -13,7 +13,7 @@ from odoo.tests.common import Form, TransactionCase, new_test_user, users
 class HrEmployeeCostHistory(TransactionCase):
     @classmethod
     def setUpClass(cls):
-        super(HrEmployeeCostHistory, cls).setUpClass()
+        super().setUpClass()
         cls.default_plan = cls.env["account.analytic.plan"].create(
             {"name": "Default", "company_id": False}
         )
@@ -49,6 +49,7 @@ class HrEmployeeCostHistory(TransactionCase):
                 "name": "Project X",
                 "allow_timesheets": True,
                 "analytic_account_id": cls.analytic_account.id,
+                "allow_billable": True,
             }
         )
         cls.task1 = cls.env["project.task"].create(
@@ -67,6 +68,45 @@ class HrEmployeeCostHistory(TransactionCase):
                 "project_id": cls.project_customer.id,
             }
         )
+        # Partner
+        cls.partner = cls.env["res.partner"].create({"name": "Test Partner"})
+        # Product
+        cls.uom_hour = cls.env.ref("uom.product_uom_hour")
+        cls.product_timesheet = cls.env["product.product"].create(
+            {
+                "name": "Service timesheet",
+                "standard_price": 30,
+                "list_price": 90,
+                "type": "service",
+                "invoice_policy": "delivery",
+                "uom_id": cls.uom_hour.id,
+                "uom_po_id": cls.uom_hour.id,
+                "default_code": "SERV-DELI2",
+                "service_type": "timesheet",
+                "taxes_id": False,
+            }
+        )
+        # SO
+        cls.sale_order = cls.env["sale.order"].create(
+            {
+                "analytic_account_id": cls.analytic_account.id,
+                "partner_id": cls.partner.id,
+                "partner_invoice_id": cls.partner.id,
+                "partner_shipping_id": cls.partner.id,
+            }
+        )
+        cls.so_line = cls.env["sale.order.line"].create(
+            {
+                "order_id": cls.sale_order.id,
+                "name": "Test SO line",
+                "product_id": cls.product_timesheet.id,
+                "product_uom_qty": 20,
+                "product_uom": cls.product_timesheet.uom_id.id,
+                "price_unit": cls.product_timesheet.list_price,
+            }
+        )
+        cls.sale_order.action_confirm()
+        cls.task1.sale_line_id = cls.so_line.id
         # timesheets
         cls.timesheets = cls.env["account.analytic.line"].create(
             [
@@ -196,3 +236,10 @@ class HrEmployeeCostHistory(TransactionCase):
             )
         last_timesheet = timesheet_cost_ids[-1]
         self.assertEqual(last_timesheet.hourly_cost, 20.0)
+
+    def test_update_employee_cost_if_invoice(self):
+        self.sale_order._create_invoices()
+        self.new_timesheet_cost_wizard(self.employee, 15.0, date.today())
+        self.new_timesheet_cost_wizard(
+            self.employee, 20.0, date.today() - relativedelta(days=10)
+        )
